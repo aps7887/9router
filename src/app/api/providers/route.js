@@ -192,6 +192,15 @@ export async function POST(request) {
     const result = { ...newConnection };
     delete result.apiKey;
 
+    // Cloud backup (Vercel): awaited push so provider survives instance recycle
+    try {
+      const { getAdapter } = await import("@/lib/db/driver.js");
+      const { pushBackupNow } = await import("@/lib/db/cloudBackup.js");
+      await pushBackupNow(await getAdapter());
+    } catch (e) {
+      console.warn(`[backup] post-provider push failed: ${e.message}`);
+    }
+
     return NextResponse.json({ connection: result }, { status: 201 });
   } catch (error) {
     if (error?.code === "PROVIDER_NAME_CONFLICT") {

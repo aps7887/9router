@@ -29,6 +29,15 @@ export async function POST(request) {
     const machineId = await getConsistentMachineId();
     const apiKey = await createApiKey(name, machineId);
 
+    // Cloud backup (Vercel): awaited push so key survives instance recycle
+    try {
+      const { getAdapter } = await import("@/lib/db/driver.js");
+      const { pushBackupNow } = await import("@/lib/db/cloudBackup.js");
+      await pushBackupNow(await getAdapter());
+    } catch (e) {
+      console.warn(`[backup] post-apikey push failed: ${e.message}`);
+    }
+
     return NextResponse.json({
       key: apiKey.key,
       name: apiKey.name,

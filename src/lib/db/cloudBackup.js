@@ -154,21 +154,46 @@ export async function maybeRestore(adapter) {
   }
 }
 
+// --- Public: immediate awaited backup (for serverless — must be awaited!) -------
+// On Vercel serverless, setTimeout/fire-and-forget never runs because the
+// function is frozen after the response. This MUST be awaited by the caller.
+export async function pushBackupNow(adapter) {
+  if (!isBackupConfigured()) return { pushed: false, reason: "not-configured" };
+  try {
+    const data = exportData(adapter);
+    await pushBackup(data);
+    console.log(`[backup] pushed to GitHub at ${data.exportedAt}`);
+    return { pushed: true, at: data.exportedAt };
+  } catch (e) {
+    console.warn(`[backup] push failed: ${e.message}`);
+    return { pushed: false, reason: e.message };
+  }
+}
+
 // --- Public: debounced backup on write (fire-and-forget) --------------------
+// NOTE: Only works on long-lived runtimes (local dev, VPS). On Vercel
+// serverless this is a no-op fallback — callers must use pushBackupNow().
 
 let backupTimer = null;
+let backupPending = false;
 
 export function scheduleBackup(adapter) {
   if (!isBackupConfigured()) return;
+  // Serverless: can't rely on timers — mark pending for explicit flush
+  if (process.env.VERCEL) {
+    backupPending = true;
+    return;
+  }
   if (backupTimer) clearTimeout(backupTimer);
   backupTimer = setTimeout(async () => {
     backupTimer = null;
-    try {
-      const data = exportData(adapter);
-      await pushBackup(data);
-      console.log(`[backup] pushed to GitHub at ${data.exportedAt}`);
-    } catch (e) {
-      console.warn(`[backup] push failed: ${e.message}`);
-    }
+    await pushBackupNow(adapter);
   }, BACKUP_DEBOUNCE_MS);
+}
+
+// Flush pending backup (call awaited at end of mutating API routes on Vercel)
+export async function flushBackupIfPending(adapter) {
+  if (!backupPending) return { pushed: false, reason: "not-pending" };
+  backupPending = false;
+  return pushBackupNow(adapter);
 }

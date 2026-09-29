@@ -479,6 +479,15 @@ export async function POST(request, { params }) {
         testStatus: "active",
       });
 
+      // Cloud backup (Vercel): awaited push so data survives instance recycle
+      try {
+        const { getAdapter } = await import("@/lib/db/driver.js");
+        const { pushBackupNow } = await import("@/lib/db/cloudBackup.js");
+        await pushBackupNow(await getAdapter());
+      } catch (e) {
+        console.warn(`[backup] post-oauth push failed: ${e.message}`);
+      }
+
       return NextResponse.json({ 
         success: true, 
         connection: {

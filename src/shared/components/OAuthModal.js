@@ -874,6 +874,14 @@ export default function OAuthModal({ isOpen, provider, providerInfo, onSuccess, 
                       ? "After authorization, copy the full callback URL or token from your browser."
                     : "After authorization, copy the full URL from your browser."}
                 </p>
+                {!isLocalhost && !isXaiProvider && !isKimchiProvider && (
+                  <div className="mb-2 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-xs text-amber-200">
+                    <span className="font-medium">Remote deployment note:</span> after completing authorization,
+                    your browser will show a &ldquo;can&rsquo;t connect to localhost&rdquo; error &mdash; this is
+                    <span className="font-medium"> expected</span>. The authorization code is already in the address
+                    bar URL. Copy the full URL (including <span className="font-mono">?code=…</span>) and paste it below.
+                  </div>
+                )}
                 <Input
                   value={callbackUrl}
                   onChange={(e) => setCallbackUrl(e.target.value)}

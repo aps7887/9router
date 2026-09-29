@@ -1,0 +1,1 @@
+{"$schema":"https://openapi.vercel.sh/vercel.json","buildCommand":"npm run build","framework":"nextjs","functions":{"src/app/api/v1/*/route.js":{"maxDuration":60},"src/app/api/v1/chat/completions/route.js":{"maxDuration":60}}}

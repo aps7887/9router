@@ -24,7 +24,12 @@ export async function POST(request, { params }) {
 
     let models = getProviderModels(alias);
 
-    const baseUrl = `http://127.0.0.1:${process.env.PORT || UPDATER_CONFIG.appPort}`;
+    // On Vercel serverless, 127.0.0.1 doesn't work — use public URL
+    const host = request.headers.get("host");
+    const proto = request.headers.get("x-forwarded-proto") || "https";
+    const baseUrl = process.env.VERCEL
+      ? `${proto}://${host}`
+      : `http://127.0.0.1:${process.env.PORT || UPDATER_CONFIG.appPort}`;
 
     // Compatible providers: fetch live model list
     if (isCompatible && models.length === 0) {

@@ -74,6 +74,24 @@ async function initAdapter() {
 
   const { runMigrationOnce } = await import("./migrate.js");
   await runMigrationOnce(adapter);
+
+  // Cloud backup: restore from GitHub if DB is empty (Vercel cold start),
+  // then wrap run() to schedule debounced backups on write.
+  try {
+    const { maybeRestore, scheduleBackup, isBackupConfigured } = await import("./cloudBackup.js");
+    if (isBackupConfigured()) {
+      await maybeRestore(adapter);
+      const origRun = adapter.run.bind(adapter);
+      adapter.run = (sql, params) => {
+        const res = origRun(sql, params);
+        scheduleBackup(adapter);
+        return res;
+      };
+    }
+  } catch (e) {
+    console.warn(`[DB] cloud backup hook failed: ${e.message}`);
+  }
+
   return adapter;
 }
 
